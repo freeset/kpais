@@ -1,5 +1,8 @@
 import copy
 import time
+import cProfile
+import pstats
+from io import StringIO
 
 
 class Node:
@@ -87,9 +90,7 @@ def createChessboard(chessboardSize):
     return chessboard
 
 
-def main():
-    # find solution takes as arguments
-    # starting row,starting column,chessboardSize,maximum time
+def profile_code():
     findSolution(4, 0, 5, 15)
     findSolution(2, 2, 5, 15)
     findSolution(3, 2, 5, 15)
@@ -101,6 +102,17 @@ def main():
     findSolution(1, 5, 6, 15)
     findSolution(2, 1, 6, 15)
 
+def main():
+    profiler = cProfile.Profile()
+    profiler.enable()
+    profile_code()
+    profiler.disable()
+    output_stream = StringIO()
+    stats = pstats.Stats(profiler, stream=output_stream).sort_stats('cumulative')
+    stats.print_stats()
+
+    with open('profile_results.txt', 'w') as f:
+        f.write(output_stream.getvalue())
 
 if __name__ == "__main__":
     main()
