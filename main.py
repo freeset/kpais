@@ -1,10 +1,13 @@
-import copy
 import time
+import cProfile
+from io import StringIO
+import pstats
+
 
 
 class Node:
     def __init__(self, chessboard, order, row, column):
-        self.chessboard = chessboard
+        self.chessboard = [row[:] for row in chessboard]
         self.order = order
         self.row = row
         self.column = column
@@ -28,6 +31,7 @@ def findSolution(startingRow, startingColumn, chessBoardSize, maxTime):
     stav = 0
     start_time = time.time()
     numberOfGeneratedNodes = 0
+    target_size = chessBoardSize * chessBoardSize;
 
     while True:
         curent_time = time.time()
@@ -51,25 +55,23 @@ def findSolution(startingRow, startingColumn, chessBoardSize, maxTime):
 
         # pop vrchneho uzla zo zasobnika a prehladanie
         lastNode = allNodes.pop()
-        for i in range(0, 8):
-            # Posun z aktualnej pozicie na aktualnu poziciu + aktualny operand
-            posRow = operands[i][0] + lastNode.row
-            posCol = operands[i][1] + lastNode.column
+        for i, (operand_row, operand_col) in enumerate(operands):
+            posRow = operand_row + lastNode.row
+            posCol = operand_col + lastNode.column
 
             # Ak sa po posune nachadzame stale v sachovnici
             if 0 <= posRow <= chessBoardSize - 1 and 0 <= posCol <= chessBoardSize - 1:
+                posValue = lastNode.chessboard[posRow][posCol]
                 # Ak na danom mieste este jazdec nebol
-                if lastNode.chessboard[posRow][posCol] == 0:
-                    # Vytvorime novy uzol s kopiou sachovnice jeho parenta
-                    # Ale pridame na sucasnu poziciu tah kona
-                    # V ramci testovania si zapamatavam pocet vygenerovanych uzlov
-                    newNode = Node(copy.deepcopy(lastNode.chessboard), lastNode.order, posRow, posCol)
+                if posValue == 0:
+                    # Vytvorime novy uzol s novou sachovnicou
+                    newNode = Node(lastNode.chessboard, lastNode.order, posRow, posCol)
                     newNode.order = lastNode.order + 1
                     newNode.chessboard[posRow][posCol] = newNode.order
                     numberOfGeneratedNodes += 1
                     # Ak uz v danom uzle bolo vykonanych n*n (n je velkost sachovnice)
                     # tahov, tak jazdec presiel celu sachovnicu
-                    if newNode.order >= chessBoardSize * chessBoardSize:
+                    if newNode.order >= target_size:
                         print("Velkost:", chessBoardSize, "Zaciatocny riadok:", startingRow + 1, "Zaciatocny stlpec:",
                               startingColumn + 1)
                         for j in range(chessBoardSize):
@@ -81,13 +83,9 @@ def findSolution(startingRow, startingColumn, chessBoardSize, maxTime):
                     allNodes.append(newNode)
 
 
-
 def createChessboard(chessboardSize):
     chessboard = [[0] * chessboardSize for _ in range(chessboardSize)]
     return chessboard
-
-
-
 
 def profile_code():
     findSolution(4, 0, 5, 15)
@@ -101,8 +99,19 @@ def profile_code():
     findSolution(1, 5, 6, 15)
     findSolution(2, 1, 6, 15)
 
+
 def main():
+    profiler = cProfile.Profile()
+    profiler.enable()
     profile_code()
+    profiler.disable()
+    output_stream = StringIO()
+    stats = pstats.Stats(profiler, stream=output_stream).sort_stats('cumulative')
+    stats.print_stats()
+
+    with open('profile_results.txt', 'w') as f:
+        f.write(output_stream.getvalue())
+
 
 if __name__ == "__main__":
     main()
